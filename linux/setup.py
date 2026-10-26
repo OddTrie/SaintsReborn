@@ -182,6 +182,54 @@ def atomic_text(path, text):
     tmp.replace(path)
 
 
+class KeepAwake:
+    """Keeps the PC from sleeping while setup works: the first install takes an hour or more, and a PC
+    (a Steam Deck in particular) that suspends meanwhile stops it. A logind inhibitor (systemd-inhibit,
+    or elogind-inhibit) is held by a small process that ends by itself when setup does, even if setup
+    is killed, so the PC is never left unable to sleep."""
+
+    def __init__(self, say, who):
+        self.say = say
+        self.who = who
+        self.proc = None
+
+    def start(self):
+        tool = shutil.which('systemd-inhibit') or shutil.which('elogind-inhibit')
+        if not tool:
+            self.say('Note: this system cannot be kept awake automatically; keep it from sleeping until setup finishes.')
+            return self
+        watch = ('import os, sys, time\n'
+                 'while True:\n'
+                 '    try:\n'
+                 '        os.kill(%d, 0)\n'
+                 '    except OSError:\n'
+                 '        sys.exit(0)\n'
+                 '    time.sleep(5)\n' % os.getpid())
+        try:
+            self.proc = subprocess.Popen([tool, '--what=sleep:idle', '--mode=block', '--who=' + self.who,
+                                          '--why=Building the game', sys.executable, '-c', watch],
+                                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                         stderr=subprocess.DEVNULL)
+            time.sleep(0.5)
+        except OSError:
+            self.proc = None
+        if self.proc is None or self.proc.poll() is not None:
+            self.proc = None
+            self.say('Note: the PC could not be kept awake automatically; keep it from sleeping until setup finishes.')
+        else:
+            self.say('Keeping the PC awake until setup finishes.')
+        return self
+
+    def stop(self):
+        if self.proc and self.proc.poll() is None:
+            self.proc.terminate()
+            try:
+                self.proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+        self.proc = None
+
+
 def tree_pids(pid):
     children = []
     try:
@@ -459,9 +507,11 @@ class Engine:
                 raise SetupError('Another installer is already using this game folder.') from exc
             with (self.work / 'setup.log').open('a', buffering=1) as log:
                 self.log = log
+                awake = KeepAwake(self.say, 'Saints Reborn Setup')
                 try:
                     self.say('\nSaints Reborn Linux Setup — ' + time.strftime('%Y-%m-%d %H:%M:%S'))
                     self.say('Install folder: ' + str(self.destination))
+                    awake.start()
                     self.prepare_environment()
                     binary = self.prepare_core()
                     self.prepare_runner()
@@ -479,6 +529,7 @@ class Engine:
                     self.say(str(exc))
                     raise
                 finally:
+                    awake.stop()
                     self.log = None
 
 
