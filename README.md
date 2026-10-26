@@ -1,5 +1,9 @@
 # Saints Reborn (formerly SaintsRowPC)
 
+> **This is an unofficial Linux fork.** It adds a Linux setup (`Saints-Reborn-Linux-Setup.run`)
+> that builds the same Windows port on Linux and plays it with Proton; see [linux/README.md](linux/README.md).
+> Report Linux problems in this fork, not to the original project.
+
 Saints Reborn is the new name of the SaintsRowPC project. Nothing else has
 changed: old links to the SaintsRowPC repository lead here, and existing
 installs keep updating as before.
@@ -58,8 +62,9 @@ list. They are always on.
 
 ### Linux (Steam Deck, desktop Linux)
 
-Coming soon: Setup will build the game on Linux, and you'll play it with
-Proton.
+Download **Saints-Reborn-Linux-Setup.run** from this fork's Releases page, make it
+executable and open it. It builds the game on your PC without sudo and plays it with
+Proton (through Steam on SteamOS / Steam Deck). See [linux/README.md](linux/README.md).
 
 ## Requirements (manual build with setup.bat)
 
