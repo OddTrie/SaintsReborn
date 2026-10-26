@@ -70,11 +70,8 @@ def add_to_steam(directory):
     if not game.is_file():
         raise SetupError('Finish installing Saints Reborn before adding it to Steam.')
     command = steam_command()
-    launcher = directory / '.saintsreborn-setup/steam/SaintsReborn.desktop'
-    contents = ('[Desktop Entry]\nType=Application\nName=Saints Reborn\n'
-                'Exec=%s\nPath=%s\nTerminal=false\nCategories=Game;\n' %
-                (desktop_arg(game), desktop_value(game.parent)))
-    atomic_text(launcher, contents)
+    # Steam adds the file it is given as the shortcut's target (a .desktop file would itself become the
+    # target, which Proton cannot run), with the file's folder (dist) as its start folder.
     # Steam's Linux import handler requires a local-path marker. Do not follow
     # a pre-existing symlink or accept a marker owned by another user.
     flags = os.O_CREAT | os.O_WRONLY | os.O_NOFOLLOW | os.O_NONBLOCK
@@ -85,7 +82,7 @@ def add_to_steam(directory):
             raise SetupError('Steam import marker is not a regular file owned by your user.')
     finally:
         os.close(descriptor)
-    uri = 'steam://addnonsteamgame/' + quote(str(launcher), safe='')
+    uri = 'steam://addnonsteamgame/' + quote(str(game), safe='')
     try:
         subprocess.run([*command, uri], check=True, timeout=20,
                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
